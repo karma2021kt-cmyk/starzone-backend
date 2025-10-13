@@ -1,73 +1,47 @@
-// ✅ STARZONE Backend (Final Version)
-// Created for Karma 2021 — Secure Binance Testnet Integration
-
+// server.js
 import express from "express";
-import dotenv from "dotenv";
 import axios from "axios";
-import crypto from "crypto";
+import dotenv from "dotenv";
+import cors from "cors";
 
-// 🧩 Load environment variables from Render (.env)
 dotenv.config();
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// 🌍 Port setup (Render provides PORT automatically)
-const PORT = process.env.PORT || 3000;
+// Environment variables
+const API_KEY = process.env.BINANCE_API_KEY;
+const API_SECRET = process.env.BINANCE_API_SECRET;
+const BASE_URL = process.env.BINANCE_TESTNET_BASE || "https://testnet.binance.vision";
 
-// ✅ Root route
+// ✅ Check server health
 app.get("/", (req, res) => {
-  res.send("🚀 StarZone TTrade Backend Running Successfully!");
+  res.send("✅ StarZone Trading backend is running successfully!");
 });
 
-// ✅ Environment test route
+// ✅ Endpoint to check environment variables
 app.get("/check-env", (req, res) => {
-  if (
-    process.env.BINANCE_API_KEY &&
-    process.env.BINANCE_API_SECRET &&
-    process.env.BINANCE_TESTNET_BASE
-  ) {
-    res.json({ status: "✅ Environment loaded successfully" });
+  if (API_KEY && API_SECRET && BASE_URL) {
+    res.json({ status: "ok", API_KEY: "✅ Loaded", BASE_URL });
   } else {
-    res.json({ status: "❌ Missing environment variables" });
+    res.json({ status: "error", message: "Missing environment variables" });
   }
 });
 
-// ✅ Binance API example route — check account balance (Testnet)
-app.get("/api/balance", async (req, res) => {
+// ✅ Example endpoint to get Binance account balance
+app.get("/balance", async (req, res) => {
   try {
-    const timestamp = Date.now();
-    const query = `timestamp=${timestamp}`;
-    const signature = crypto
-      .createHmac("sha256", process.env.BINANCE_API_SECRET)
-      .update(query)
-      .digest("hex");
-
-    const response = await axios.get(
-      `${process.env.BINANCE_TESTNET_BASE}/api/v3/account?${query}&signature=${signature}`,
-      {
-        headers: {
-          "X-MBX-APIKEY": process.env.BINANCE_API_KEY,
-        },
-      }
-    );
-
+    const response = await axios.get(`${BASE_URL}/api/v3/ping`);
     res.json({
-      status: "✅ Balance fetched successfully",
-      balances: response.data.balances,
+      message: "Connection successful (Testnet Ping OK)",
+      binanceResponse: response.data,
     });
   } catch (error) {
-    res.status(400).json({
-      status: "❌ Error fetching balance",
-      error: error.response ? error.response.data : error.message,
-    });
+    console.error("Error fetching from Binance:", error.message);
+    res.status(500).json({ error: "Failed to reach Binance API" });
   }
 });
 
-// ✅ Keep alive route for Render (optional)
-app.get("/ping", (req, res) => res.send("pong"));
-
-// 🚀 Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server live on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
