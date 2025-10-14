@@ -1,47 +1,32 @@
-// server.js
 import express from "express";
-import axios from "axios";
-import dotenv from "dotenv";
+import fetch from "node-fetch";
 import cors from "cors";
+import dotenv from "dotenv";
 
 dotenv.config();
-
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Environment variables
-const API_KEY = process.env.BINANCE_API_KEY;
-const API_SECRET = process.env.BINANCE_API_SECRET;
-const BASE_URL = process.env.BINANCE_TESTNET_BASE || "https://testnet.binance.vision";
-
-// ✅ Check server health
-app.get("/", (req, res) => {
-  res.send("✅ StarZone Trading backend is running successfully!");
-});
-
-// ✅ Endpoint to check environment variables
+// --- Test route ---
 app.get("/check-env", (req, res) => {
-  if (API_KEY && API_SECRET && BASE_URL) {
-    res.json({ status: "ok", API_KEY: "✅ Loaded", BASE_URL });
-  } else {
-    res.json({ status: "error", message: "Missing environment variables" });
-  }
+  res.json({
+    status: "ok",
+    API_KEY: process.env.BINANCE_API_KEY ? "✅ Loaded" : "❌ Missing",
+    BASE_URL: "https://testnet.binance.vision",
+  });
 });
 
-// ✅ Example endpoint to get Binance account balance
-app.get("/balance", async (req, res) => {
+// --- New route to fetch BTC price ---
+app.get("/price", async (req, res) => {
   try {
-    const response = await axios.get(`${BASE_URL}/api/v3/ping`);
-    res.json({
-      message: "Connection successful (Testnet Ping OK)",
-      binanceResponse: response.data,
-    });
-  } catch (error) {
-    console.error("Error fetching from Binance:", error.message);
-    res.status(500).json({ error: "Failed to reach Binance API" });
+    const response = await fetch("https://testnet.binance.vision/api/v3/ticker/price?symbol=BTCUSDT");
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Error fetching price", details: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ StarZone backend running on port ${PORT}`));
